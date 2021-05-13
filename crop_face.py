@@ -3,6 +3,7 @@
 # pylint: disable=C0103
 # pylint: disable=E1101
 
+import os
 import sys
 import time
 import numpy as np
@@ -38,9 +39,9 @@ if len(sys.argv) < 3:
 src = sys.argv[1]
 dst = sys.argv[2]
 cap = cv2.VideoCapture(src)
-out = None
 
-print(dst)
+
+os.mkdir(dst)
 
 detection_graph = tf.Graph()
 with detection_graph.as_default():
@@ -54,18 +55,12 @@ with detection_graph.as_default():
   config = tf.compat.v1.ConfigProto()
   config.gpu_options.allow_growth = True
   with tf.compat.v1.Session(graph=detection_graph, config=config) as sess:
-    frame_num = 1490;
-    while frame_num:
-      frame_num -= 1
+    index = 0
+    while True:
       ret, image = cap.read()
       if ret == 0:
           break
 
-      if out is None:
-          [h, w] = image.shape[:2]
-          fps = cap.get(cv2.CAP_PROP_FPS)
-          fcc = cv2.VideoWriter_fourcc(*'MP4V')
-          out = cv2.VideoWriter(dst, fcc, fps, (w, h))
 
 
       image_np = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
@@ -103,8 +98,10 @@ with detection_graph.as_default():
           category_index,
           use_normalized_coordinates=True,
           line_thickness=4)
-      out.write(image)
 
+      fname = "{0}{1:06d}.jpg".format(dst, index)
+      cv2.imwrite(fname, image)
+      index += 1
 
     cap.release()
     out.release()

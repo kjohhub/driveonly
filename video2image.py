@@ -1,5 +1,6 @@
 import cv2
 import sys
+import os
 
 if len(sys.argv) < 3:
     sys.exit()
@@ -8,6 +9,8 @@ src = sys.argv[1]
 dst = sys.argv[2]
 cap = cv2.VideoCapture(src)
 idx = 0
+
+os.mkdir(dst)
 
 while True:
     ret, image = cap.read()

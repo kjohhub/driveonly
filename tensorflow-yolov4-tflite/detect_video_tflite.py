@@ -70,14 +70,18 @@ def main(_argv):
         height = int(vid.get(cv2.CAP_PROP_FRAME_HEIGHT))
         if FLAGS.video == '0':
             fps = 5
+            width = 480
+            height = 480
         else:
             fps = int(vid.get(cv2.CAP_PROP_FPS))
         codec = cv2.VideoWriter_fourcc(*FLAGS.output_format)
         out = cv2.VideoWriter(FLAGS.output, codec, fps, (width, height))
 
     while True:
-        return_value, frame = vid.read()
+        return_value, src = vid.read()
         if return_value:
+            if FLAGS.video == '0':
+                frame = src[:, 80:560].copy()
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             image = Image.fromarray(frame)
         else:

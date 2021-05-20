@@ -58,12 +58,8 @@ else:
     wr_te = csv.writer(fp_te)
 
 
-
-
-
 file_list = os.listdir(src_dir)
-file_list.sort()
-#file_list_jpg = [file for file in file_list if file.endswith(".jpg")]
+file_list_jpg = [file for file in file_list if file.endswith(".jpg")]
 
 detection_graph = tf.Graph()
 with detection_graph.as_default():
@@ -78,7 +74,7 @@ with detection_graph.as_default():
     config.gpu_options.allow_growth = True
     with tf.compat.v1.Session(graph=detection_graph, config=config) as sess:
         index = 0
-        for fname in file_list:
+        for fname in file_list_jpg:
             fpath = src_dir + fname
             image = cv2.imread(fpath, cv2.IMREAD_COLOR) 
       

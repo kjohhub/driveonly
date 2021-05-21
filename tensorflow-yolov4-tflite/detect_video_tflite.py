@@ -8,12 +8,14 @@ from absl.flags import FLAGS
 import core.utils as utils
 from core.yolov4 import filter_boxes
 from tensorflow.python.saved_model import tag_constants
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 import cv2
 import numpy as np
 from tensorflow.compat.v1 import ConfigProto
 from tensorflow.compat.v1 import InteractiveSession
 import csv
+#import server
+#import device
 
 flags.DEFINE_string('framework', 'tflite', '(tf, tflite, trt')
 flags.DEFINE_string('weights', './checkpoints/custom-tiny-416.tflite', 'path to weights file')
@@ -27,9 +29,40 @@ flags.DEFINE_float('iou', 0.45, 'iou threshold')
 flags.DEFINE_float('score', 0.25, 'score threshold')
 flags.DEFINE_boolean('dont_show', False, 'dont show video output')
 
+def draw_status(img, status):
+    text = ["Normal", "Sleepy", "Mobile", "Codriver"]
+    image = Image.fromarray(img)
+    draw = ImageDraw.Draw(image, "RGB")
+    font = ImageFont.truetype("./font/arial.ttf", 32)
+    #draw.rectangle([(480, 360), (640, 480)], fill=(0, 0, 0, 192))
+    
+    if status == 0:
+        draw.text((500, 10), text[status], (0,255,0), font=font)
+    else:
+        draw.text((500, 10), text[status], (255,0,0), font=font)
+
+    return np.asarray(image)
+
+def calc_status(records):
+    score_1s = records[-5:] 
+    score_3s = records[-15:]
+    avg_1s = np.mean(score_1s, axis=0)
+    avg_3s = np.mean(score_3s, axis=0)
+    #print(avg_records)
+    if (avg_1s[0] > 0.7):
+        return 0
+    elif (avg_1s[1] > 0.6):
+        return 1
+    elif (avg_3s[2] > 0.7):
+        return 2
+    elif (avg_3s[3] > 0.7):
+        return 3
+    else:
+        return 0
+
 
 def save_records(classes, scores, count):
-    record = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    record = [0.0] * 4
     for i in range(count):
         record[int(classes[i])] = scores[i]
     return record
@@ -42,7 +75,7 @@ def main(_argv):
     STRIDES, ANCHORS, NUM_CLASS, XYSCALE = utils.load_config(FLAGS)
     input_size = FLAGS.size
     video_path = FLAGS.video
-    records = list()
+    records = []
 
     if FLAGS.framework == 'tflite':
         interpreter = tf.lite.Interpreter(model_path=FLAGS.weights)
@@ -70,20 +103,15 @@ def main(_argv):
         height = int(vid.get(cv2.CAP_PROP_FRAME_HEIGHT))
         if FLAGS.video == '0':
             fps = 5
-            width = 480
-            height = 480
         else:
             fps = int(vid.get(cv2.CAP_PROP_FPS))
         codec = cv2.VideoWriter_fourcc(*FLAGS.output_format)
         out = cv2.VideoWriter(FLAGS.output, codec, fps, (width, height))
 
     while True:
-        return_value, src = vid.read()
+        return_value, frame = vid.read()
         if return_value:
-            if FLAGS.video == '0':
-                frame = src[:, 80:560].copy()
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            image = Image.fromarray(frame)
         else:
             print('Video has ended or failed, try a different video format!')
             break
@@ -126,10 +154,16 @@ def main(_argv):
 
         pred_bbox = [boxes.numpy(), scores.numpy(), classes.numpy(), valid_detections.numpy()]
         image = utils.draw_bbox(frame, pred_bbox)
-        fps = 1.0 / (time.time() - start_time)
-        print("FPS: %.2f" % fps)
-        result = np.asarray(image)
-        cv2.namedWindow("result", cv2.WINDOW_AUTOSIZE)
+
+        status = calc_status(records)
+        image = draw_status(image, status)
+        
+        inference = (time.time() - start_time) * 1000
+        #fps = 1.0 / (time.time() - start_time)
+        print("Inference time : %dms" % inference)
+
+        #result = np.asarray(image)
+        #cv2.namedWindow("result", cv2.WINDOW_AUTOSIZE)
         result = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
         
         if not FLAGS.dont_show:

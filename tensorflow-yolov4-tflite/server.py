@@ -10,8 +10,8 @@ from os import rename
 import os
 import pymysql
 
-AWS_ACCESS_KEY="AKIA5VZTIAOJRARET74W"
-AWS_SECRET_KEY="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"
+AWS_ACCESS_KEY=""
+AWS_SECRET_KEY=""
 BUCKET_NAME="yangjae-team04-s3"
 
 def s3_connection():
